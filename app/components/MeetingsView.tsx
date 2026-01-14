@@ -231,12 +231,12 @@ export default function MeetingsView() {
 
               {/* Summary */}
               {selectedMeeting.summary && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-100 p-6">
                   <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                    <span className="text-purple-500">AI</span>
+                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-medium rounded">AI</span>
                     {language === 'de' ? 'Zusammenfassung' : 'Summary'}
                   </h3>
-                  <p className="text-slate-600">{selectedMeeting.summary}</p>
+                  <p className="text-slate-600 leading-relaxed">{selectedMeeting.summary}</p>
                 </div>
               )}
 
@@ -287,10 +287,12 @@ export default function MeetingsView() {
                     <button
                       onClick={handleAddTranscript}
                       disabled={!transcriptInput.trim()}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                      className="px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                     >
-                      <span className="text-sm">AI</span>
-                      {language === 'de' ? 'Transkript speichern & analysieren' : 'Save & Analyze Transcript'}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      {language === 'de' ? 'Analysieren' : 'Analyze with AI'}
                     </button>
                   </div>
                 )}
@@ -377,7 +379,11 @@ export default function MeetingsView() {
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-              <div className="text-slate-400 text-6xl mb-4">📅</div>
+              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
               <p className="text-slate-500">
                 {language === 'de' ? 'Meeting auswählen, um Details anzuzeigen' : 'Select a meeting to view details'}
               </p>

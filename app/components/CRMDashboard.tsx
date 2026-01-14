@@ -15,12 +15,10 @@ export default function CRMDashboard() {
     .slice(0, 5);
 
   const pendingTasks = crmTasks.filter(t => t.status !== 'done').slice(0, 5);
-
   const getContact = (id: string) => contacts.find(c => c.id === id);
 
   const sendRecommendationsToTelegram = async () => {
     if (recommendations.length === 0) return;
-
     setSendingTelegram(true);
     try {
       const topRecs = recommendations.slice(0, 5);
@@ -29,7 +27,6 @@ export default function CRMDashboard() {
           const contact = getContact(rec.contactId);
           return `${idx + 1}. <b>${contact?.name || 'Unknown'}</b>\n   ${rec.reason}\n   → ${rec.suggestedAction}`;
         }).join('\n\n');
-
       await sendTelegramMessage(message);
     } catch (error) {
       console.error('Failed to send Telegram message:', error);
@@ -38,74 +35,166 @@ export default function CRMDashboard() {
     }
   };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">
-        {language === 'de' ? 'CRM Dashboard' : 'CRM Dashboard'}
-      </h1>
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-          <div className="text-3xl font-bold text-blue-600">{contacts.length}</div>
-          <div className="text-slate-600">{language === 'de' ? 'Kontakte' : 'Contacts'}</div>
+    if (date.toDateString() === today.toDateString()) {
+      return language === 'de' ? 'Heute' : 'Today';
+    }
+    if (date.toDateString() === tomorrow.toDateString()) {
+      return language === 'de' ? 'Morgen' : 'Tomorrow';
+    }
+    return date.toLocaleDateString(language === 'de' ? 'de-DE' : 'en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div className="min-h-full">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+          {language === 'de' ? 'Dashboard' : 'Dashboard'}
+        </h1>
+        <p className="mt-1 text-slate-500">
+          {language === 'de' ? 'Überblick über Ihre Kundenbeziehungen' : 'Overview of your customer relationships'}
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">{language === 'de' ? 'Kontakte' : 'Contacts'}</p>
+              <p className="text-3xl font-semibold text-slate-900 mt-1">{contacts.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-          <div className="text-3xl font-bold text-green-600">{meetings.length}</div>
-          <div className="text-slate-600">{language === 'de' ? 'Meetings' : 'Meetings'}</div>
+
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Meetings</p>
+              <p className="text-3xl font-semibold text-slate-900 mt-1">{upcomingMeetings.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+              <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-          <div className="text-3xl font-bold text-orange-600">{pendingTasks.length}</div>
-          <div className="text-slate-600">{language === 'de' ? 'Offene Aufgaben' : 'Open Tasks'}</div>
+
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">{language === 'de' ? 'Aufgaben' : 'Tasks'}</p>
+              <p className="text-3xl font-semibold text-slate-900 mt-1">{pendingTasks.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+              <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-          <div className="text-3xl font-bold text-purple-600">{recommendations.length}</div>
-          <div className="text-slate-600">{language === 'de' ? 'Empfehlungen' : 'Recommendations'}</div>
+
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">{language === 'de' ? 'Empfehlungen' : 'To Reach Out'}</p>
+              <p className="text-3xl font-semibold text-slate-900 mt-1">{recommendations.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center">
+              <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* AI Recommendations */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-              <span className="text-purple-500">AI</span>
-              {language === 'de' ? 'Kontaktempfehlungen' : 'Reach Out Recommendations'}
-            </h2>
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                <svg className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="font-semibold text-slate-900">
+                {language === 'de' ? 'Kontaktempfehlungen' : 'Recommended Actions'}
+              </h2>
+            </div>
             {isTelegramConnected && recommendations.length > 0 && (
               <button
                 onClick={sendRecommendationsToTelegram}
                 disabled={sendingTelegram}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm disabled:opacity-50"
-                title={language === 'de' ? 'An Telegram senden' : 'Send to Telegram'}
+                className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1.5 disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
                 </svg>
-                {sendingTelegram ? '...' : 'TG'}
+                {sendingTelegram ? 'Sending...' : 'Send to Telegram'}
               </button>
             )}
           </div>
-          <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+          <div className="divide-y divide-slate-100">
             {recommendations.length === 0 ? (
-              <p className="text-slate-500 text-center py-4">
-                {language === 'de' ? 'Keine Empfehlungen' : 'No recommendations'}
-              </p>
+              <div className="px-6 py-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-slate-500">{language === 'de' ? 'Alle Kontakte sind aktuell' : 'All contacts are up to date'}</p>
+              </div>
             ) : (
               recommendations.slice(0, 5).map((rec, idx) => {
                 const contact = getContact(rec.contactId);
                 if (!contact) return null;
                 return (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                      rec.priority >= 8 ? 'bg-red-500' : rec.priority >= 5 ? 'bg-orange-500' : 'bg-blue-500'
-                    }`}>
-                      {rec.priority}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-slate-800">{contact.name}</div>
-                      <div className="text-sm text-slate-600">{rec.reason}</div>
-                      <div className="text-xs text-slate-500 mt-1">{rec.suggestedAction}</div>
+                  <div key={idx} className="px-6 py-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 flex-shrink-0">
+                        {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{contact.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            rec.priority >= 8 ? 'bg-red-100 text-red-700' :
+                            rec.priority >= 5 ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {rec.basedOn === 'time_gap' ? (language === 'de' ? 'Überfällig' : 'Overdue') :
+                             rec.basedOn === 'task_pending' ? (language === 'de' ? 'Aufgabe' : 'Task') :
+                             (language === 'de' ? 'Follow-up' : 'Follow-up')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-0.5">{rec.reason}</p>
+                        <p className="text-sm text-slate-400 mt-1">{rec.suggestedAction}</p>
+                      </div>
+                      <button
+                        onClick={() => setCurrentView('crm-contacts')}
+                        className="text-sm text-violet-600 hover:text-violet-700 font-medium flex-shrink-0"
+                      >
+                        {language === 'de' ? 'Ansehen' : 'View'}
+                      </button>
                     </div>
                   </div>
                 );
@@ -114,157 +203,131 @@ export default function CRMDashboard() {
           </div>
         </div>
 
-        {/* Upcoming Meetings */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">
-              {language === 'de' ? 'Anstehende Meetings' : 'Upcoming Meetings'}
-            </h2>
-            <button
-              onClick={() => setCurrentView('crm-meetings')}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              {language === 'de' ? 'Alle anzeigen' : 'View all'}
-            </button>
-          </div>
-          <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-            {upcomingMeetings.length === 0 ? (
-              <p className="text-slate-500 text-center py-4">
-                {language === 'de' ? 'Keine anstehenden Meetings' : 'No upcoming meetings'}
-              </p>
-            ) : (
-              upcomingMeetings.map(meeting => (
-                <div key={meeting.id} className="p-3 bg-slate-50 rounded-lg">
-                  <div className="font-medium text-slate-800">{meeting.title}</div>
-                  <div className="text-sm text-slate-600">
-                    {new Date(meeting.date).toLocaleDateString()} - {meeting.duration}min
-                  </div>
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {meeting.attendeeIds.map(id => {
-                      const contact = getContact(id);
-                      return contact ? (
-                        <span key={id} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                          {contact.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Pending Tasks */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">
-              {language === 'de' ? 'Offene Aufgaben' : 'Pending Tasks'}
-            </h2>
-            <button
-              onClick={() => setCurrentView('crm-tasks')}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              {language === 'de' ? 'Alle anzeigen' : 'View all'}
-            </button>
-          </div>
-          <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
-            {pendingTasks.length === 0 ? (
-              <p className="text-slate-500 text-center py-4">
-                {language === 'de' ? 'Keine offenen Aufgaben' : 'No pending tasks'}
-              </p>
-            ) : (
-              pendingTasks.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                  <div className={`w-2 h-2 rounded-full ${
-                    task.priority === 'high' ? 'bg-red-500' : task.priority === 'medium' ? 'bg-orange-500' : 'bg-green-500'
-                  }`} />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-slate-800">{task.title}</div>
-                    {task.dueDate && (
-                      <div className="text-xs text-slate-500">
-                        {language === 'de' ? 'Fällig:' : 'Due:'} {new Date(task.dueDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Calendar Integration */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200">
-            <h2 className="font-semibold text-slate-800">
-              {language === 'de' ? 'Google Kalender' : 'Google Calendar'}
-            </h2>
-          </div>
-          <div className="p-4">
-            {isCalendarConnected ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-600">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>{language === 'de' ? 'Verbunden' : 'Connected'}</span>
-                </div>
-                <button
-                  onClick={syncCalendar}
-                  className="w-full py-2 px-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  {language === 'de' ? 'Jetzt synchronisieren' : 'Sync Now'}
-                </button>
-                {calendarEvents.length > 0 && (
-                  <div className="space-y-2 mt-3">
-                    {calendarEvents.slice(0, 3).map(event => (
-                      <div key={event.id} className="text-sm p-2 bg-slate-50 rounded">
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-xs text-slate-500">
-                          {new Date(event.start).toLocaleString()}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Upcoming Meetings */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="font-semibold text-slate-900">
+                {language === 'de' ? 'Nächste Meetings' : 'Upcoming'}
+              </h2>
               <button
-                onClick={connectCalendar}
-                className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                onClick={() => setCurrentView('crm-meetings')}
+                className="text-sm text-slate-500 hover:text-slate-700"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-3h3v3zm0-4.5h-3v-3h3v3zm0-4.5h-3V6h3v3zm4.5 9h-3v-3h3v3zm0-4.5h-3v-3h3v3zm0-4.5h-3V6h3v3zm4.5 9h-3v-3h3v3zm0-4.5h-3v-3h3v3zm0-4.5h-3V6h3v3z"/>
-                </svg>
-                {language === 'de' ? 'Mit Google Kalender verbinden' : 'Connect Google Calendar'}
+                {language === 'de' ? 'Alle' : 'All'}
               </button>
-            )}
+            </div>
+            <div className="divide-y divide-slate-100">
+              {upcomingMeetings.length === 0 ? (
+                <div className="px-6 py-8 text-center text-slate-500 text-sm">
+                  {language === 'de' ? 'Keine anstehenden Meetings' : 'No upcoming meetings'}
+                </div>
+              ) : (
+                upcomingMeetings.slice(0, 3).map(meeting => (
+                  <div key={meeting.id} className="px-6 py-3 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-medium text-emerald-600">
+                          {formatDate(meeting.date).slice(0, 3)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 text-sm truncate">{meeting.title}</p>
+                        <p className="text-xs text-slate-500">{meeting.duration} min</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Calendar Connection */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h2 className="font-semibold text-slate-900">Google Calendar</h2>
+            </div>
+            <div className="p-6">
+              {isCalendarConnected ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-emerald-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>{language === 'de' ? 'Verbunden' : 'Connected'}</span>
+                  </div>
+                  <button
+                    onClick={syncCalendar}
+                    className="w-full py-2 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+                  >
+                    {language === 'de' ? 'Synchronisieren' : 'Sync Now'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={connectCalendar}
+                  className="w-full py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  {language === 'de' ? 'Verbinden' : 'Connect Calendar'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Navigation */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Quick Nav */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           onClick={() => setCurrentView('crm-contacts')}
-          className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg"
+          className="group p-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all text-left"
         >
-          <div className="text-lg font-semibold">{language === 'de' ? 'Kontakte verwalten' : 'Manage Contacts'}</div>
-          <div className="text-sm opacity-80">{contacts.length} {language === 'de' ? 'Kontakte' : 'contacts'}</div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-slate-900 transition-colors flex items-center justify-center">
+              <svg className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">{language === 'de' ? 'Kontakte' : 'Contacts'}</p>
+              <p className="text-sm text-slate-500">{contacts.length} {language === 'de' ? 'Personen' : 'people'}</p>
+            </div>
+          </div>
         </button>
+
         <button
           onClick={() => setCurrentView('crm-meetings')}
-          className="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg"
+          className="group p-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all text-left"
         >
-          <div className="text-lg font-semibold">{language === 'de' ? 'Meetings & Transkripte' : 'Meetings & Transcripts'}</div>
-          <div className="text-sm opacity-80">{meetings.length} {language === 'de' ? 'Meetings' : 'meetings'}</div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 group-hover:bg-emerald-600 transition-colors flex items-center justify-center">
+              <svg className="w-5 h-5 text-emerald-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">Meetings</p>
+              <p className="text-sm text-slate-500">{language === 'de' ? 'Transkripte & Notizen' : 'Transcripts & Notes'}</p>
+            </div>
+          </div>
         </button>
+
         <button
           onClick={() => setCurrentView('crm-tasks')}
-          className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg"
+          className="group p-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all text-left"
         >
-          <div className="text-lg font-semibold">{language === 'de' ? 'Aufgaben' : 'Tasks'}</div>
-          <div className="text-sm opacity-80">{pendingTasks.length} {language === 'de' ? 'offen' : 'pending'}</div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 group-hover:bg-amber-500 transition-colors flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">{language === 'de' ? 'Aufgaben' : 'Tasks'}</p>
+              <p className="text-sm text-slate-500">{pendingTasks.length} {language === 'de' ? 'offen' : 'pending'}</p>
+            </div>
+          </div>
         </button>
       </div>
     </div>
