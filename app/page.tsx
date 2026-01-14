@@ -9,6 +9,10 @@ import ScheduleView from './components/ScheduleView';
 import SettingsView from './components/SettingsView';
 import TaskModal from './components/TaskModal';
 import TimeTracker from './components/TimeTracker';
+import CRMDashboard from './components/CRMDashboard';
+import ContactsView from './components/ContactsView';
+import MeetingsView from './components/MeetingsView';
+import CRMTasksView from './components/CRMTasksView';
 import { usePlanning } from './context/PlanningContext';
 
 export default function Home() {
@@ -28,6 +32,14 @@ export default function Home() {
         return <ScheduleView />;
       case 'settings':
         return <SettingsView />;
+      case 'crm':
+        return <CRMDashboard />;
+      case 'crm-contacts':
+        return <ContactsView />;
+      case 'crm-meetings':
+        return <MeetingsView />;
+      case 'crm-tasks':
+        return <CRMTasksView />;
       default:
         return <GanttChart />;
     }

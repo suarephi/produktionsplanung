@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { PlanningProvider } from "./context/PlanningContext";
-
-const inter = Inter({
-  subsets: ["latin"],
-});
+import { CRMProvider } from "./context/CRMContext";
 
 export const metadata: Metadata = {
   title: "Produktionsplanungstool",
-  description: "Production Planning Tool for Manufacturing",
+  description: "Production Planning Tool for Manufacturing with CRM",
 };
 
 export default function RootLayout({
@@ -19,9 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
-      <body className={`${inter.className} antialiased bg-slate-100`}>
+      <body className="font-sans antialiased bg-slate-100">
         <PlanningProvider>
-          {children}
+          <CRMProvider>
+            {children}
+          </CRMProvider>
         </PlanningProvider>
       </body>
     </html>
