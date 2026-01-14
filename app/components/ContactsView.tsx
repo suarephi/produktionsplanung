@@ -18,7 +18,7 @@ interface Email {
 }
 
 export default function ContactsView() {
-  const { contacts, addContact, updateContact, deleteContact, interactions, addInteraction, meetings, isCalendarConnected } = useCRM();
+  const { contacts, addContact, updateContact, deleteContact, interactions, addInteraction, meetings, isCalendarConnected, sendTelegramMessage, isTelegramConnected } = useCRM();
   const { language } = usePlanning();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<CRMContact | null>(null);
@@ -27,6 +27,14 @@ export default function ContactsView() {
   const [newNote, setNewNote] = useState('');
   const [emails, setEmails] = useState<Email[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
+
+  // Email compose state
+  const [showComposeModal, setShowComposeModal] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,6 +78,81 @@ export default function ContactsView() {
       });
       setNewNote('');
     }
+  };
+
+  // Send email via Gmail API
+  const handleSendEmail = async () => {
+    if (!selectedContact || !emailSubject.trim() || !emailBody.trim()) return;
+
+    const accessToken = localStorage.getItem('google_access_token');
+    if (!accessToken) {
+      setEmailError(language === 'de' ? 'Bitte Google-Konto verbinden' : 'Please connect Google account');
+      return;
+    }
+
+    setSendingEmail(true);
+    setEmailError(null);
+    setEmailSuccess(false);
+
+    try {
+      const response = await fetch('/api/google/gmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          to: selectedContact.email,
+          subject: emailSubject,
+          message: emailBody,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send');
+      }
+
+      // Log interaction
+      addInteraction({
+        id: `i${Date.now()}`,
+        contactId: selectedContact.id,
+        type: 'email',
+        date: new Date().toISOString(),
+        summary: `Sent: ${emailSubject}`,
+      });
+
+      setEmailSuccess(true);
+      setTimeout(() => {
+        setShowComposeModal(false);
+        setEmailSubject('');
+        setEmailBody('');
+        setEmailSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // Send message via Telegram
+  const handleSendTelegram = async (message: string) => {
+    if (!selectedContact) return;
+
+    const fullMessage = `<b>Message to ${selectedContact.name}</b>\n\n${message}`;
+    const success = await sendTelegramMessage(fullMessage);
+
+    if (success) {
+      addInteraction({
+        id: `i${Date.now()}`,
+        contactId: selectedContact.id,
+        type: 'note',
+        date: new Date().toISOString(),
+        summary: `Telegram: ${message.substring(0, 50)}...`,
+      });
+    }
+    return success;
   };
 
   const contactInteractions = selectedContact
@@ -238,6 +321,49 @@ export default function ContactsView() {
                       </>
                     )}
                   </div>
+                </div>
+
+                {/* Quick Actions - Send Message */}
+                <div className="mt-4 flex gap-2 flex-wrap">
+                  {isCalendarConnected && (
+                    <button
+                      onClick={() => {
+                        setEmailSubject('');
+                        setEmailBody('');
+                        setEmailError(null);
+                        setShowComposeModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                      </svg>
+                      {language === 'de' ? 'E-Mail senden' : 'Send Email'}
+                    </button>
+                  )}
+                  {isTelegramConnected && (
+                    <button
+                      onClick={() => {
+                        const message = prompt(language === 'de' ? 'Nachricht eingeben:' : 'Enter message:');
+                        if (message) handleSendTelegram(message);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                      </svg>
+                      Telegram
+                    </button>
+                  )}
+                  <a
+                    href={`tel:${selectedContact.phone}`}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                    </svg>
+                    {language === 'de' ? 'Anrufen' : 'Call'}
+                  </a>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
@@ -480,6 +606,104 @@ export default function ContactsView() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {language === 'de' ? 'Erstellen' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Compose Email Modal */}
+      {showComposeModal && selectedContact && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-800">
+                {language === 'de' ? 'E-Mail verfassen' : 'Compose Email'}
+              </h2>
+              <button
+                onClick={() => setShowComposeModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'de' ? 'An' : 'To'}</label>
+                <div className="px-3 py-2 bg-slate-100 rounded-lg text-slate-600">
+                  {selectedContact.name} &lt;{selectedContact.email}&gt;
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'de' ? 'Betreff' : 'Subject'} *</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder={language === 'de' ? 'Betreff eingeben...' : 'Enter subject...'}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'de' ? 'Nachricht' : 'Message'} *</label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder={language === 'de' ? 'Nachricht eingeben...' : 'Enter your message...'}
+                  rows={8}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {emailError && (
+                <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                  {emailError}
+                </div>
+              )}
+
+              {emailSuccess && (
+                <div className="p-3 bg-green-100 text-green-700 rounded-lg text-sm flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  {language === 'de' ? 'E-Mail gesendet!' : 'Email sent!'}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowComposeModal(false)}
+                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
+              >
+                {language === 'de' ? 'Abbrechen' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={!emailSubject.trim() || !emailBody.trim() || sendingEmail || emailSuccess}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {language === 'de' ? 'Senden...' : 'Sending...'}
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                    {language === 'de' ? 'Senden' : 'Send'}
+                  </>
+                )}
               </button>
             </div>
           </div>
