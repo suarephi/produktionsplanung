@@ -39,6 +39,11 @@ interface CRMContextType {
 
   // Search
   searchContacts: (query: string) => CRMContact[];
+
+  // Telegram
+  sendTelegramMessage: (message: string) => Promise<boolean>;
+  isTelegramConnected: boolean;
+  checkTelegramStatus: () => Promise<void>;
 }
 
 const CRM_STORAGE_KEYS = {
@@ -146,6 +151,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [isCalendarConnected, setIsCalendarConnected] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isTelegramConnected, setIsTelegramConnected] = useState(false);
 
   // Load from localStorage
   useEffect(() => {
@@ -165,10 +171,42 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     loadData<CRMTask[]>(CRM_STORAGE_KEYS.tasks, setCRMTasks, sampleTasks);
     loadData<CRMInteraction[]>(CRM_STORAGE_KEYS.interactions, setInteractions, []);
 
-    const calendarConnected = localStorage.getItem(CRM_STORAGE_KEYS.calendarConnected);
-    setIsCalendarConnected(calendarConnected === 'true');
+    // Check for existing Google token
+    const accessToken = localStorage.getItem('google_access_token');
+    setIsCalendarConnected(!!accessToken);
 
     setIsHydrated(true);
+  }, []);
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    const hash = window.location.hash;
+
+    // Check if this is an OAuth callback
+    if (url.searchParams.get('google_auth') === 'success' && hash.includes('tokens=')) {
+      try {
+        const tokensBase64 = hash.split('tokens=')[1];
+        const tokensJson = atob(tokensBase64);
+        const tokens = JSON.parse(tokensJson);
+
+        // Store tokens
+        localStorage.setItem('google_access_token', tokens.access_token);
+        if (tokens.refresh_token) {
+          localStorage.setItem('google_refresh_token', tokens.refresh_token);
+        }
+        localStorage.setItem('google_email', tokens.email || '');
+
+        setIsCalendarConnected(true);
+
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        console.error('Failed to parse Google tokens:', error);
+      }
+    }
   }, []);
 
   // Save to localStorage
@@ -315,43 +353,55 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     // In a real app, this could trigger an API call
   }, []);
 
-  // Calendar integration
-  const connectCalendar = useCallback(() => {
-    // In production: OAuth flow to Google Calendar
-    // For now, simulate connection
-    setIsCalendarConnected(true);
-    localStorage.setItem(CRM_STORAGE_KEYS.calendarConnected, 'true');
+  // Calendar integration with real Google OAuth
+  const connectCalendar = useCallback(async () => {
+    try {
+      // Fetch the Google OAuth URL from our API
+      const response = await fetch('/api/google/auth');
+      const data = await response.json();
+
+      if (data.url) {
+        // Redirect to Google OAuth
+        window.location.href = data.url;
+      } else {
+        console.error('Failed to get Google auth URL');
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
+    }
   }, []);
 
   const disconnectCalendar = useCallback(() => {
     setIsCalendarConnected(false);
     setCalendarEvents([]);
+    localStorage.removeItem('google_access_token');
+    localStorage.removeItem('google_refresh_token');
     localStorage.setItem(CRM_STORAGE_KEYS.calendarConnected, 'false');
   }, []);
 
   const syncCalendar = useCallback(async () => {
-    if (!isCalendarConnected) return;
+    const accessToken = localStorage.getItem('google_access_token');
+    if (!accessToken) return;
 
-    // In production: Fetch from Google Calendar API
-    // Simulated calendar events
-    const mockEvents: CalendarEvent[] = [
-      {
-        id: 'cal1',
-        title: 'Team Standup',
-        start: new Date().toISOString(),
-        end: new Date(Date.now() + 30 * 60000).toISOString(),
-        attendees: ['team@company.com'],
-      },
-      {
-        id: 'cal2',
-        title: 'Client Review - TechCorp',
-        start: new Date(Date.now() + 24 * 60 * 60000).toISOString(),
-        end: new Date(Date.now() + 25 * 60 * 60000).toISOString(),
-        attendees: ['anna.schmidt@techcorp.de'],
-      },
-    ];
-    setCalendarEvents(mockEvents);
-  }, [isCalendarConnected]);
+    try {
+      const response = await fetch('/api/google/calendar', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired, disconnect
+          disconnectCalendar();
+        }
+        return;
+      }
+
+      const data = await response.json();
+      setCalendarEvents(data.events || []);
+    } catch (error) {
+      console.error('Calendar sync error:', error);
+    }
+  }, [disconnectCalendar]);
 
   // Search
   const searchContacts = useCallback((query: string): CRMContact[] => {
@@ -363,6 +413,36 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       c.tags.some(t => t.toLowerCase().includes(lower))
     );
   }, [contacts]);
+
+  // Telegram integration
+  const checkTelegramStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/telegram');
+      const data = await response.json();
+      setIsTelegramConnected(data.connected || false);
+    } catch {
+      setIsTelegramConnected(false);
+    }
+  }, []);
+
+  const sendTelegramMessage = useCallback(async (message: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const data = await response.json();
+      return data.success || false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Check Telegram status on mount
+  useEffect(() => {
+    checkTelegramStatus();
+  }, [checkTelegramStatus]);
 
   return (
     <CRMContext.Provider
@@ -389,6 +469,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         connectCalendar,
         disconnectCalendar,
         searchContacts,
+        sendTelegramMessage,
+        isTelegramConnected,
+        checkTelegramStatus,
       }}
     >
       {children}

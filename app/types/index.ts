@@ -53,7 +53,7 @@ export interface ScheduledTask {
 }
 
 // View Types
-export type ViewType = 'overview' | 'personal' | 'machine' | 'capacity' | 'schedule' | 'settings' | 'crm' | 'crm-contacts' | 'crm-meetings' | 'crm-tasks';
+export type ViewType = 'overview' | 'personal' | 'machine' | 'capacity' | 'schedule' | 'settings' | 'crm' | 'crm-contacts' | 'crm-meetings' | 'crm-tasks' | 'crm-calendar';
 
 // CRM Types
 export interface CRMContact {

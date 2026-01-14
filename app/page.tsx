@@ -13,6 +13,7 @@ import CRMDashboard from './components/CRMDashboard';
 import ContactsView from './components/ContactsView';
 import MeetingsView from './components/MeetingsView';
 import CRMTasksView from './components/CRMTasksView';
+import CalendarView from './components/CalendarView';
 import { usePlanning } from './context/PlanningContext';
 
 export default function Home() {
@@ -40,6 +41,8 @@ export default function Home() {
         return <MeetingsView />;
       case 'crm-tasks':
         return <CRMTasksView />;
+      case 'crm-calendar':
+        return <CalendarView />;
       default:
         return <GanttChart />;
     }

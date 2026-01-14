@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { usePlanning } from '../context/PlanningContext';
 import { CRMMeeting } from '../types';
+import AudioRecorder from './AudioRecorder';
 
 export default function MeetingsView() {
   const { meetings, contacts, addMeeting, updateMeeting, deleteMeeting, addCRMTask, crmTasks } = useCRM();
@@ -239,6 +240,30 @@ export default function MeetingsView() {
                 </div>
               )}
 
+              {/* Audio Recording */}
+              {!selectedMeeting.transcript && (
+                <AudioRecorder
+                  language={language as 'en' | 'de'}
+                  onTranscriptionComplete={(data) => {
+                    updateMeeting(selectedMeeting.id, {
+                      transcript: data.transcript,
+                      summary: data.summary,
+                      actionItems: [...selectedMeeting.actionItems, ...data.actionItems],
+                      topics: data.topics,
+                      status: 'completed',
+                    });
+                    setSelectedMeeting({
+                      ...selectedMeeting,
+                      transcript: data.transcript,
+                      summary: data.summary,
+                      actionItems: [...selectedMeeting.actionItems, ...data.actionItems],
+                      topics: data.topics,
+                      status: 'completed',
+                    });
+                  }}
+                />
+              )}
+
               {/* Transcript */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <h3 className="font-semibold text-slate-800 mb-3">
@@ -250,6 +275,9 @@ export default function MeetingsView() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <p className="text-sm text-slate-500 mb-2">
+                      {language === 'de' ? 'Oder manuell eingeben:' : 'Or enter manually:'}
+                    </p>
                     <textarea
                       value={transcriptInput}
                       onChange={(e) => setTranscriptInput(e.target.value)}

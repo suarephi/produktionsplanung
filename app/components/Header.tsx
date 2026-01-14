@@ -22,6 +22,7 @@ export default function Header() {
     { id: 'crm-contacts', label: language === 'de' ? 'Kontakte' : 'Contacts' },
     { id: 'crm-meetings', label: 'Meetings' },
     { id: 'crm-tasks', label: language === 'de' ? 'Aufgaben' : 'Tasks' },
+    { id: 'crm-calendar', label: language === 'de' ? 'Kalender' : 'Calendar' },
   ];
 
   const isCRMView = currentView.startsWith('crm');

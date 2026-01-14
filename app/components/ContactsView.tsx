@@ -1,18 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { usePlanning } from '../context/PlanningContext';
 import { CRMContact } from '../types';
 
+interface Email {
+  id: string;
+  threadId: string;
+  subject: string;
+  fromEmail: string;
+  fromName: string;
+  toEmail: string;
+  snippet: string;
+  date: string;
+  isSent: boolean;
+}
+
 export default function ContactsView() {
-  const { contacts, addContact, updateContact, deleteContact, interactions, addInteraction, meetings } = useCRM();
+  const { contacts, addContact, updateContact, deleteContact, interactions, addInteraction, meetings, isCalendarConnected } = useCRM();
   const { language } = usePlanning();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<CRMContact | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [loadingEmails, setLoadingEmails] = useState(false);
 
   const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,6 +79,37 @@ export default function ContactsView() {
   const contactMeetings = selectedContact
     ? meetings.filter(m => m.attendeeIds.includes(selectedContact.id))
     : [];
+
+  // Fetch emails when contact is selected and Gmail is connected
+  useEffect(() => {
+    const fetchEmails = async () => {
+      if (!selectedContact || !isCalendarConnected) {
+        setEmails([]);
+        return;
+      }
+
+      const accessToken = localStorage.getItem('google_access_token');
+      if (!accessToken) return;
+
+      setLoadingEmails(true);
+      try {
+        const response = await fetch(`/api/google/gmail?contact=${encodeURIComponent(selectedContact.email)}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setEmails(data.emails || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch emails:', error);
+      } finally {
+        setLoadingEmails(false);
+      }
+    };
+
+    fetchEmails();
+  }, [selectedContact, isCalendarConnected]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -313,6 +358,46 @@ export default function ContactsView() {
                   )}
                 </div>
               </div>
+
+              {/* Email History */}
+              {isCalendarConnected && (
+                <div className="p-6 border-t border-slate-200">
+                  <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    {language === 'de' ? 'E-Mail-Verlauf' : 'Email History'}
+                  </h3>
+                  {loadingEmails ? (
+                    <div className="text-center py-4 text-slate-500">
+                      {language === 'de' ? 'Lädt E-Mails...' : 'Loading emails...'}
+                    </div>
+                  ) : emails.length === 0 ? (
+                    <p className="text-slate-500 text-center py-4">
+                      {language === 'de' ? 'Keine E-Mails gefunden' : 'No emails found'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {emails.map(email => (
+                        <div key={email.id} className={`p-3 rounded-lg border-l-4 ${
+                          email.isSent ? 'bg-blue-50 border-l-blue-500' : 'bg-slate-50 border-l-slate-400'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              email.isSent ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
+                            }`}>
+                              {email.isSent ? (language === 'de' ? 'Gesendet' : 'Sent') : (language === 'de' ? 'Empfangen' : 'Received')}
+                            </span>
+                            <span className="text-xs text-slate-500">{new Date(email.date).toLocaleDateString()}</span>
+                          </div>
+                          <div className="font-medium text-slate-800 mt-1 text-sm">{email.subject || '(No subject)'}</div>
+                          <div className="text-xs text-slate-600 mt-1 line-clamp-2">{email.snippet}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
