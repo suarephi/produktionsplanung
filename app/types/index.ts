@@ -53,7 +53,73 @@ export interface ScheduledTask {
 }
 
 // View Types
-export type ViewType = 'overview' | 'personal' | 'machine' | 'capacity' | 'schedule' | 'settings';
+export type ViewType = 'overview' | 'personal' | 'machine' | 'capacity' | 'schedule' | 'settings' | 'crm' | 'crm-contacts' | 'crm-meetings' | 'crm-tasks' | 'crm-calendar';
+
+// CRM Types
+export interface CRMContact {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+  tags: string[];
+  notes: string;
+  createdAt: string;
+  lastInteraction?: string;
+}
+
+export interface CRMInteraction {
+  id: string;
+  contactId: string;
+  type: 'meeting' | 'call' | 'email' | 'note';
+  date: string;
+  summary: string;
+  details?: string;
+}
+
+export interface CRMMeeting {
+  id: string;
+  title: string;
+  date: string;
+  duration: number; // minutes
+  attendeeIds: string[];
+  transcript?: string;
+  summary?: string;
+  actionItems: string[];
+  topics: string[];
+  calendarEventId?: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+}
+
+export interface CRMTask {
+  id: string;
+  title: string;
+  description?: string;
+  contactId?: string;
+  meetingId?: string;
+  dueDate?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'todo' | 'in_progress' | 'done';
+  createdAt: string;
+}
+
+export interface AIRecommendation {
+  contactId: string;
+  reason: string;
+  priority: number; // 1-10
+  suggestedAction: string;
+  basedOn: 'time_gap' | 'meeting_topic' | 'task_pending';
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  attendees: string[];
+  description?: string;
+}
 
 // Date Range
 export interface DateRange {

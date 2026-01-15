@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { usePlanning } from '../context/PlanningContext';
 import { ViewType } from '../types';
 
 export default function Header() {
   const { currentView, setCurrentView, language, setLanguage, t } = usePlanning();
+  const [showCRMDropdown, setShowCRMDropdown] = useState(false);
 
   const views: { id: ViewType; label: string }[] = [
     { id: 'overview', label: t('view.overview') },
@@ -14,6 +16,16 @@ export default function Header() {
     { id: 'schedule', label: t('view.schedule') },
     { id: 'settings', label: t('view.settings') },
   ];
+
+  const crmViews: { id: ViewType; label: string }[] = [
+    { id: 'crm', label: 'Dashboard' },
+    { id: 'crm-contacts', label: language === 'de' ? 'Kontakte' : 'Contacts' },
+    { id: 'crm-meetings', label: 'Meetings' },
+    { id: 'crm-tasks', label: language === 'de' ? 'Aufgaben' : 'Tasks' },
+    { id: 'crm-calendar', label: language === 'de' ? 'Kalender' : 'Calendar' },
+  ];
+
+  const isCRMView = currentView.startsWith('crm');
 
   return (
     <header className="bg-slate-900 text-white shadow-lg">
@@ -44,6 +56,43 @@ export default function Header() {
                 {view.label}
               </button>
             ))}
+            {/* CRM Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCRMDropdown(!showCRMDropdown)}
+                onBlur={() => setTimeout(() => setShowCRMDropdown(false), 200)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 ${
+                  isCRMView
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                CRM
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showCRMDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-slate-800 rounded-lg shadow-xl py-1 min-w-40 z-50">
+                  {crmViews.map((view) => (
+                    <button
+                      key={view.id}
+                      onClick={() => {
+                        setCurrentView(view.id);
+                        setShowCRMDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                        currentView === view.id
+                          ? 'bg-purple-600 text-white'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700'
+                      }`}
+                    >
+                      {view.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Language Toggle */}
@@ -72,6 +121,19 @@ export default function Header() {
                 }`}
               >
                 {view.label}
+              </button>
+            ))}
+            {crmViews.map((view) => (
+              <button
+                key={view.id}
+                onClick={() => setCurrentView(view.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  currentView === view.id
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-300 bg-slate-800'
+                }`}
+              >
+                CRM: {view.label}
               </button>
             ))}
           </div>
